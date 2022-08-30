@@ -37,13 +37,14 @@ def create_nvme_disks(vbox, name)
                     '--name', 'NVME Controller',
                     '--add', 'pcie']
   end
-
-  dir = "../vdisks"
+  
+  dir = "./vdisks"
+  nvmeSize = '256'
   FileUtils.mkdir_p dir unless File.directory?(dir)
 
-  disks = (0..4).map { |x| ["nvmedisk#{x}", '1024'] }
+  disks = (1..8).map { |x| "nvmedisk#{x}" }
 
-  disks.each_with_index do |(name, size), i|
+  disks.each_with_index do |name, i|
     file_to_disk = "#{dir}/#{name}.vdi"
     port = (i ).to_s
 
@@ -53,7 +54,7 @@ def create_nvme_disks(vbox, name)
                       '--filename',
                       file_to_disk,
                       '--size',
-                      size,
+                      nvmeSize,
                       '--format',
                       'VDI',
                       '--variant',
@@ -78,12 +79,13 @@ def create_disks(vbox, name, box)
                     '--add', 'sata']
   end
 
-  dir = "../vdisks"
+  dir = "./vdisks"
+  hdd_size = '512'
   FileUtils.mkdir_p dir unless File.directory?(dir)
 
-  disks = (1..6).map { |x| ["disk#{x}", '1024'] }
+  disks = (1..3).map { |x| "disk#{x}" }
 
-  disks.each_with_index do |(name, size), i|
+  disks.each_with_index do |name, i|
     file_to_disk = "#{dir}/#{name}.vdi"
     port = (i + 1).to_s
 
@@ -93,7 +95,7 @@ def create_disks(vbox, name, box)
                       '--filename',
                       file_to_disk,
                       '--size',
-                      size,
+                      hdd_size,
                       '--format',
                       'VDI',
                       '--variant',
@@ -129,6 +131,18 @@ config.vm.define "server" do |server|
     create_disks(vb, name, config.vm.box)
     create_nvme_disks(vb, name)
   end
+
+  server.vm.provision "shell", inline: <<-SHELL
+		echo Creating /var/log/raid_logs if not exist
+		mkdir -p /var/log/raid_logs
+		lsblk >> /var/log/raid_logs/lsblk_init.out 
+  SHELL
+  
+  server.vm.provision "shell", 
+		path: "scripts/raid_script.sh"
+  
+  server.vm.provision "shell", 
+		path: "scripts/gpt_script.sh"
 
 end
 

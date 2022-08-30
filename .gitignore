@@ -1,0 +1,6 @@
+packer/packer.exe
+packer/packer_cache
+.vagrant
+*.box
+*.vdi
+vdisks
